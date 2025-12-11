@@ -1,53 +1,51 @@
-# Company MCP Servers
+# Database MCP Servers
 
-A collection of Model Context Protocol (MCP) servers for internal use, containerized with Docker for easy deployment and dependency management.
+Model Context Protocol (MCP) servers for database schema exploration. These servers enable Claude to introspect your database structure through a secure, read-only interface.
 
 ## Available Servers
 
-### PostgreSQL MCP
-Located in `postgresql-mcp/`
-
-Provides tools to interact with PostgreSQL databases, including table description and schema exploration capabilities.
+| Server | Description | Tools |
+|--------|-------------|-------|
+| **PostgreSQL MCP** | Schema exploration for PostgreSQL databases | `list_schemas`, `list_tables`, `describe_table`, `get_table_indexes`, `get_table_constraints` |
+| **ScyllaDB MCP** | Schema exploration for ScyllaDB/Cassandra clusters | `list_keyspaces`, `list_tables`, `describe_table`, `get_table_indexes`, `get_materialized_views` |
 
 ## Prerequisites
 
-- Docker Desktop installed and running
-- Claude Desktop or Claude Code installed
+- Docker
+- Claude Desktop or Claude Code
 
-## Project Structure
+## Quick Start
 
+### 1. Create your environment file
+
+Create a `.env` file in the MCP server directory with your database credentials:
+
+**PostgreSQL** (`postgresql-mcp/.env`):
 ```
-.
-├── README.md
-├── postgresql-mcp/
-│   ├── Dockerfile
-│   ├── pyproject.toml
-│   └── src/
-│       └── postgresql_mcp/
-│           └── __init__.py
-└── [future-mcp-servers]/
-```
-
-## Building MCP Servers
-
-Each MCP server can be built as a Docker image:
-
-```bash
-# Build PostgreSQL MCP
-cd postgresql-mcp
-docker build -t company-postgresql-mcp .
+POSTGRES_HOST=host.docker.internal
+POSTGRES_PORT=5432
+POSTGRES_USER=your_user
+POSTGRES_PASSWORD=your_password
+POSTGRES_DATABASE=your_database
 ```
 
-## Configuration
+**ScyllaDB** (`scylladb-mcp/.env`):
+```
+SCYLLA_HOST=host.docker.internal
+SCYLLA_PORT=9042
+SCYLLA_USER=your_user
+SCYLLA_PASSWORD=your_password
+```
 
-### Claude Desktop Setup
+### 2. Configure Claude
 
-1. Open your Claude Desktop configuration file:
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-   - Linux: `~/.config/Claude/claude_desktop_config.json`
+Add to your Claude configuration file:
 
-2. Add the MCP server configuration:
+**Claude Desktop:** `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+
+**Claude Code:** `~/.claude/settings.json` or run `claude mcp add`
+
+#### PostgreSQL
 
 ```json
 {
@@ -55,158 +53,83 @@ docker build -t company-postgresql-mcp .
     "postgresql": {
       "command": "docker",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--network", "host",
-        "-e", "POSTGRES_HOST=localhost",
-        "-e", "POSTGRES_PORT=5432",
-        "-e", "POSTGRES_USER=your_user",
-        "-e", "POSTGRES_PASSWORD=your_password",
-        "-e", "POSTGRES_DATABASE=your_database",
-        "company-postgresql-mcp"
+        "compose",
+        "-f", "/path/to/postgresql-mcp/docker-compose.yml",
+        "--env-file", "/path/to/postgresql-mcp/.env",
+        "run", "--rm", "postgresql-mcp"
       ]
     }
   }
 }
 ```
 
-3. Restart Claude Desktop for changes to take effect
-
-### Claude Code Setup
-
-1. Open your Claude Code settings file:
-   - Location: `~/.config/claude-code/settings.json` (Linux/macOS)
-   - Or use the command: `claude-code config edit`
-
-2. Add the MCP server configuration under `mcpServers`:
+#### ScyllaDB
 
 ```json
 {
   "mcpServers": {
-    "postgresql": {
+    "scylladb": {
       "command": "docker",
       "args": [
-        "run",
-        "--rm",
-        "-i",
-        "--network", "host",
-        "-e", "POSTGRES_HOST=localhost",
-        "-e", "POSTGRES_PORT=5432",
-        "-e", "POSTGRES_USER=your_user",
-        "-e", "POSTGRES_PASSWORD=your_password",
-        "-e", "POSTGRES_DATABASE=your_database",
-        "company-postgresql-mcp"
+        "compose",
+        "-f", "/path/to/scylladb-mcp/docker-compose.yml",
+        "--env-file", "/path/to/scylladb-mcp/.env",
+        "run", "--rm", "scylladb-mcp"
       ]
     }
   }
 }
 ```
 
-3. Restart Claude Code or reload the configuration
+### 3. Restart Claude
+
+Restart Claude Desktop or Claude Code to load the new MCP server. The Docker image will be built automatically on first use.
 
 ## Environment Variables
 
-Each MCP server may require specific environment variables. These are passed via Docker's `-e` flag:
-
 ### PostgreSQL MCP
-- `POSTGRES_HOST`: Database host (default: localhost)
-- `POSTGRES_PORT`: Database port (default: 5432)
-- `POSTGRES_USER`: Database username
-- `POSTGRES_PASSWORD`: Database password
-- `POSTGRES_DATABASE`: Database name
 
-## Networking Considerations
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `POSTGRES_HOST` | No | `localhost` | Database host |
+| `POSTGRES_PORT` | No | `5432` | Database port |
+| `POSTGRES_USER` | Yes | — | Database username |
+| `POSTGRES_PASSWORD` | Yes | — | Database password |
+| `POSTGRES_DATABASE` | Yes | — | Database name |
 
-### Connecting to Local Databases
+### ScyllaDB MCP
 
-When connecting to databases running on your local machine from within Docker:
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SCYLLA_HOST` | No | `localhost` | Cluster host |
+| `SCYLLA_PORT` | No | `9042` | CQL port |
+| `SCYLLA_USER` | No | — | Username (if auth enabled) |
+| `SCYLLA_PASSWORD` | No | — | Password (if auth enabled) |
 
-- Use `--network host` (Linux) to share the host's network
-- On macOS/Windows, use `host.docker.internal` as the hostname instead of `localhost`
+## Network Configuration
 
-Example for macOS/Windows:
-```json
-{
-  "args": [
-    "run", "--rm", "-i",
-    "-e", "POSTGRES_HOST=host.docker.internal",
-    ...
-  ]
-}
-```
+**Local databases (macOS/Windows):** Use `host.docker.internal` as the host.
 
-### Connecting to Remote Databases
+**Local databases (Linux):** Use `localhost` and add `network_mode: host` to the docker-compose.yml.
 
-For remote databases, remove `--network host` and use the actual hostname:
-
-```json
-{
-  "args": [
-    "run", "--rm", "-i",
-    "-e", "POSTGRES_HOST=db.example.com",
-    "-e", "POSTGRES_PORT=5432",
-    ...
-  ]
-}
-```
+**Remote databases:** Use the actual hostname directly.
 
 ## Development
 
-### Adding a New MCP Server
-
-1. Create a new directory for your MCP server
-2. Copy the structure from an existing server (e.g., `postgresql-mcp/`)
-3. Update `Dockerfile` and `pyproject.toml`
-4. Implement your MCP server logic
-5. Build and test the Docker image
-6. Update this README with configuration instructions
-
-### Testing MCP Servers
-
-You can test an MCP server by running it directly:
-
 ```bash
-docker run --rm -i \
-  -e POSTGRES_HOST=localhost \
-  -e POSTGRES_USER=test \
-  -e POSTGRES_PASSWORD=test \
-  -e POSTGRES_DATABASE=testdb \
-  company-postgresql-mcp
+cd postgresql-mcp  # or scylladb-mcp
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+pytest tests/
 ```
 
-The server should start and wait for MCP protocol messages on stdin.
+## Security
 
-## Troubleshooting
+These MCP servers are designed for read-only schema exploration. We recommend:
 
-### Server Not Appearing in Claude
-
-1. Verify the Docker image is built: `docker images | grep company-`
-2. Check Claude's logs for errors:
-   - Claude Desktop: Look in the app's developer console
-   - Claude Code: Check the output panel
-3. Ensure Docker Desktop is running
-4. Verify the configuration file syntax is valid JSON
-
-### Connection Issues
-
-1. For local databases, ensure the database is running and accessible
-2. Check network settings (use `host.docker.internal` on macOS/Windows)
-3. Verify environment variables are correct
-4. Test database connectivity outside of Docker first
-
-### Docker Issues
-
-1. Ensure Docker Desktop has sufficient resources
-2. Check Docker logs: `docker logs <container-id>`
-3. Verify the image builds successfully: `docker build -t test .`
-
-## Security Notes
-
-- Never commit passwords or sensitive credentials to version control
-- Consider using Docker secrets or environment files for sensitive data
-- Restrict database user permissions to only what's needed
-- Use read-only database credentials when possible
+- Using database credentials with minimal required permissions
+- Never committing credentials to version control
 
 ## License
 
