@@ -1,0 +1,28 @@
+services:
+  scylladb:
+    image: scylladb/scylla:latest
+    container_name: scylladb-test
+    ports:
+      - "9042:9042"
+    environment:
+      - SCYLLA_DEVELOPER_MODE=1
+    healthcheck:
+      test: [ "CMD", "cqlsh", "-e", "describe keyspaces" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  scylladb-mcp:
+    build: .
+    container_name: scylladb-mcp-server
+    depends_on:
+      scylladb:
+        condition: service_healthy
+    environment:
+      - SCYLLA_HOST=scylladb
+      - SCYLLA_PORT=9042
+      # Optional: Add authentication if needed
+      # - SCYLLA_USER=cassandra
+      # - SCYLLA_PASSWORD=cassandra
+    stdin_open: true
+    tty: true

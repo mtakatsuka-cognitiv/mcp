@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # PostgreSQL MCP Server
+  postgresql-mcp:
+    build: .
+    image: postgresql-mcp:latest
+    container_name: postgresql-mcp
+    environment:
+      # Database connection settings
+      - POSTGRES_HOST=${POSTGRES_HOST:-host.docker.internal}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE}
+    stdin_open: true
+    tty: false
+    networks:
+      - mcp-network
+    # Uncomment the following if you want the MCP server to wait for the postgres service
+    # depends_on:
+    #   - postgres
+
+    # Optional: PostgreSQL database for local testing
+    # Uncomment this service if you want to run a local PostgreSQL instance
+    # postgres:
+    #   image: postgres:16-alpine
+    #   container_name: postgresql-mcp-db
+    #   environment:
+    #     - POSTGRES_USER=${POSTGRES_USER}
+    #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    #     - POSTGRES_DB=${POSTGRES_DATABASE}
+    #   ports:
+    #     - "5432:5432"
+    #   volumes:
+    #     - postgres-data:/var/lib/postgresql/data
+    #     # Optional: Add initialization scripts
+    #     # - ./init-scripts:/docker-entrypoint-initdb.d
+    #   networks:
+    #     - mcp-network
+    #   healthcheck:
+    #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+    #     interval: 5s
+    #     timeout: 5s
+    #     retries: 5
+
+networks:
+  mcp-network:
+    external: true
+    name: orion_net # TODO need to see if this can be removed.
+
+# Uncomment if using the postgres service
+# volumes:
+#   postgres-data:

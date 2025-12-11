@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scylladb-mcp"
+version = "0.1.0"
+description = "ScyllaDB MCP Server for table description and schema exploration"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0.0",
+    "cassandra-driver>=3.29.0",
+    "asyncio-atexit>=1.0.1",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
